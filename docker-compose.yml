@@ -1,0 +1,43 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: neuedu-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: "123456"
+      MYSQL_DATABASE: neueduproject2
+      TZ: Asia/Shanghai
+    volumes:
+      - ./SQLdata/neueduproject2.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p123456"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build: ./maven
+    container_name: neuedu-backend
+    environment:
+      DB_URL: "jdbc:mysql://mysql:3306/neueduproject2?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai"
+      DB_USER: root
+      DB_PASSWORD: "123456"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "8081:8080"
+
+  frontend:
+    build:
+      context: ./vue
+      args:
+        VITE_API_BASE_URL: /maven_war_exploded
+    container_name: neuedu-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
